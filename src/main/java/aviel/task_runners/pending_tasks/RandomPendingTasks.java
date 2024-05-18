@@ -2,24 +2,29 @@ package aviel.task_runners.pending_tasks;
 
 import aviel.task_runners.DLNode;
 import aviel.task_runners.ExposedDLList;
+import aviel.task_runners.KeyedTask;
+import aviel.task_runners.ThisShouldNotHappen;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 /**
  * Tasks are disposed weightedly, that is, to dispose a task a key is chosen by a chance proportional to the amount of tasks on that key.
  * Tasks are fetched indiscriminately, that is, a key for whom its task will be fetched is chosen with uniform distribution.
  */
-public class RandomPendingTasks<Key> implements PendingTasks<Key> {
+public class RandomPendingTasks<Key, Task extends KeyedTask<Key>> implements PendingTasks<Task> {
+    private final Consumer<Task> onDispose;
     private final Undiscriminating<Key> undiscriminating;
     private final Weighted<Key> weighted;
-    private final Queues<Key> queues;
+    private final Queues<Key, Task> queues;
     private final int maxStoredTasks;
     private final Random random;
 
-    public RandomPendingTasks(Random random, int maxStoredTasks) {
+    public RandomPendingTasks(Random random, int maxStoredTasks, Consumer<Task> onDispose) {
         if (maxStoredTasks < 1) {
             throw new IllegalArgumentException("maxStoredTasks must have a strictly positive value");
         }
+        this.onDispose = onDispose;
         undiscriminating = new Undiscriminating<>(maxStoredTasks);
         weighted = new Weighted<>(maxStoredTasks);
         queues = new Queues<>(maxStoredTasks);
@@ -28,13 +33,13 @@ public class RandomPendingTasks<Key> implements PendingTasks<Key> {
     }
 
     @Override
-    public synchronized void insert(Key key, Runnable task) {
+    public synchronized void insert(Task task) {
         if (weighted.size() == maxStoredTasks) {
             disposeEntryWeightedly();
         }
-        weighted.insert(key);
-        undiscriminating.insert(key);
-        queues.insert(key, task);
+        weighted.insert(task.key());
+        undiscriminating.insert(task.key());
+        queues.insert(task);
     }
 
     private void disposeEntryWeightedly() {
@@ -43,14 +48,17 @@ public class RandomPendingTasks<Key> implements PendingTasks<Key> {
             return;
         }
         Key removed = removedOpt.get();
-        queues.removeOneOn(removed);
+        Task task = queues.removeOneOn(removed)
+                          .orElseThrow(() -> new ThisShouldNotHappen("For every entry on weighted" +
+                                                                     " there must be a corresponding entry on queues"));
+        onDispose.accept(task);
         if (queues.isEmpty(removed)) {
             undiscriminating.remove(removed);
         }
     }
 
     @Override
-    public synchronized Optional<Task<Key>> remove() {
+    public synchronized Optional<Task> remove() {
         Optional<Key> chosenOpt = undiscriminating.get(random);
         if (chosenOpt.isEmpty()) {
             return Optional.empty();
@@ -60,11 +68,10 @@ public class RandomPendingTasks<Key> implements PendingTasks<Key> {
         if (weighted.isEmpty(chosen)) {
             undiscriminating.remove(chosen);
         }
-        Runnable runnable = queues.removeOneOn(chosen)
-                                  .orElseThrow(() -> new RuntimeException("this should not happen," +
-                                                                          " for every entry on undiscriminating" +
-                                                                          " there must be a corresponding entry on queues"));
-        return Optional.of(new Task<>(chosen, runnable));
+        Task task = queues.removeOneOn(chosen)
+                          .orElseThrow(() -> new ThisShouldNotHappen("For every entry on undiscriminating" +
+                                                                     " there must be a corresponding entry on queues"));
+        return Optional.of(task);
     }
 
     @Override
@@ -72,27 +79,27 @@ public class RandomPendingTasks<Key> implements PendingTasks<Key> {
         return queues.isEmpty();
     }
 
-    private static class Queues<Key> {
-        private final Map<Key, Queue<Runnable>> queues;
+    private static class Queues<Key, Task extends KeyedTask<Key>> {
+        private final Map<Key, Queue<Task>> queues;
 
         public Queues(int maxStoredTasks) {
             this.queues = new HashMap<>(maxStoredTasks);
         }
 
-        public Optional<Runnable> removeOneOn(Key key) {
-            Queue<Runnable> queue = queues.get(key);
+        public Optional<Task> removeOneOn(Key key) {
+            Queue<Task> queue = queues.get(key);
             if (queue == null) {
                 return Optional.empty();
             }
-            Runnable removed = queue.remove();
+            Task removed = queue.remove();
             if (queue.isEmpty()) {
                 queues.remove(key);
             }
             return Optional.of(removed);
         }
 
-        public void insert(Key key, Runnable task) {
-            queues.computeIfAbsent(key, __ -> new LinkedList<>())
+        public void insert(Task task) {
+            queues.computeIfAbsent(task.key(), __ -> new LinkedList<>())
                   .add(task);
         }
 
@@ -154,9 +161,8 @@ public class RandomPendingTasks<Key> implements PendingTasks<Key> {
             }
             ExposedDLList<Integer> locatorEntry = locator.get(key);
             int index = locatorEntry.removeLast()
-                                    .orElseThrow(() -> new RuntimeException("this should not happen," +
-                                                                            " data map should not contain empty entries" +
-                                                                            " at Weighted"));
+                                    .orElseThrow(() -> new ThisShouldNotHappen("Data map should not contain empty entries" +
+                                                                               " at Weighted"));
             Collections.swap(data, index, data.size() - 1);
             data.remove(data.size() - 1);
             if (index < data.size()) {

@@ -17,10 +17,10 @@ import static aviel.task_runners.DurationForScheduler.from;
  * Tasks that are submitted when the load is at maxLoad are pended for future execution and are fetched when load is just below loadRate.
  * The pending and fetching of tasks at a maxLoad load is managed by PendingTasks that is provided by the pendingTasksCreator provided at construction.
  */
-public class LoadBasedRateLimiter<MetaData> implements RateLimiter<MetaData> {
+public class LoadBasedRateLimiter<Task extends Runnable> implements RateLimiter<Task> {
     private final AtomicInteger load;
     private final int maxLoad;
-    private final PendingTasks<MetaData> pending;
+    private final PendingTasks<Task> pending;
 
     /**
      * @param pendingTasksCreator a creator for the collector of tasks for pending.
@@ -28,7 +28,7 @@ public class LoadBasedRateLimiter<MetaData> implements RateLimiter<MetaData> {
      * @param loadRate            the rate of which the load decreases involuntarily. Units: Hz (times per second)
      * @param maxLoad             the maximal load that is allowed to be reached. Units: Hz (times per second)
      */
-    public LoadBasedRateLimiter(Supplier<PendingTasks<MetaData>> pendingTasksCreator,
+    public LoadBasedRateLimiter(Supplier<PendingTasks<Task>> pendingTasksCreator,
                                 ScheduledExecutorService loadDecrementer,
                                 int loadRate,
                                 int maxLoad) {
@@ -36,7 +36,7 @@ public class LoadBasedRateLimiter<MetaData> implements RateLimiter<MetaData> {
         this.maxLoad = maxLoad;
         pending = pendingTasksCreator.get();
         from(Duration.ofSeconds(1).dividedBy(loadRate)).schedule(loadDecrementer, () -> {
-            Optional<PendingTasks.Task<MetaData>> removed = pending.remove();
+            Optional<Task> removed = pending.remove();
             if (removed.isPresent()) {
                 removed.get().run();
             } else {
@@ -46,11 +46,11 @@ public class LoadBasedRateLimiter<MetaData> implements RateLimiter<MetaData> {
     }
 
     @Override
-    public void submitTask(MetaData metaData, Runnable task) {
+    public void submitTask(Task task) {
         if (incrementLoad()) {
             task.run();
         } else {
-            pending.insert(metaData, task);
+            pending.insert(task);
         }
     }
 

@@ -9,10 +9,8 @@ import java.time.Instant;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.Optional;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.Supplier;
 
 /**
@@ -21,9 +19,9 @@ import java.util.function.Supplier;
  * A pended task will be fetched on the next instant that is possible for its execution without breaking the limit property promised.
  * The pending and fetching of tasks is managed by the PendingTasks created by the provided pendingTasksCreator at construction.
  */
-public class ExactUniformingRateLimiter<MetaData> implements RateLimiter<MetaData> {
+public class ExactUniformingRateLimiter<Task extends Runnable> implements RateLimiter<Task> {
     private final Deque<Instant> executed;
-    private final PendingTasks<MetaData> pending;
+    private final PendingTasks<Task> pending;
     private final ScheduledExecutorService pendingScheduler;
     private final AtomicBoolean isScheduled;
     private final Duration duration;
@@ -31,7 +29,7 @@ public class ExactUniformingRateLimiter<MetaData> implements RateLimiter<MetaDat
     private final double uniformingRate;
     private final Object completionLock;
 
-    public ExactUniformingRateLimiter(Supplier<PendingTasks<MetaData>> pendingTasksCreator,
+    public ExactUniformingRateLimiter(Supplier<PendingTasks<Task>> pendingTasksCreator,
                                       ScheduledExecutorService pendingScheduler,
                                       double uniformingRate,
                                       Duration duration, int limit) {
@@ -55,7 +53,7 @@ public class ExactUniformingRateLimiter<MetaData> implements RateLimiter<MetaDat
     }
 
     @Override
-    public void submitTask(MetaData metaData, Runnable task) {
+    public void submitTask(Task task) {
         synchronized (completionLock) {
             Instant now = Instant.now();
             cleanOldExecutedRecords();
@@ -63,7 +61,7 @@ public class ExactUniformingRateLimiter<MetaData> implements RateLimiter<MetaDat
                 executed.addLast(now);
                 task.run();
             } else {
-                pending.insert(metaData, task);
+                pending.insert(task);
                 schedulePending();
             }
             if (pending.isEmpty()) {
@@ -88,8 +86,6 @@ public class ExactUniformingRateLimiter<MetaData> implements RateLimiter<MetaDat
                                                                     .dividedBy(1_000_000L)
                                                                     .multipliedBy((long) (1_000_000d * uniformingRate)));
         }
-        System.out.println("next settle at " + untilNextPending);
-        System.out.println("feels like " + "-".repeat((int) (untilNextPending.toNanos() / 1_000_000L / 50L)));
         DurationForScheduler.from(untilNextPending).schedule(pendingScheduler, this::pendingExecutorTask);
     }
 
@@ -98,11 +94,11 @@ public class ExactUniformingRateLimiter<MetaData> implements RateLimiter<MetaDat
             try {
                 cleanOldExecutedRecords();
                 if (executed.size() < limit) {
-                    Optional<PendingTasks.Task<MetaData>> nextPending = pending.remove();
+                    Optional<Task> nextPending = pending.remove();
                     if (nextPending.isPresent()) {
                         Instant now = Instant.now();
                         executed.addLast(now);
-                        nextPending.get().get().run();
+                        nextPending.get().run();
                     }
                 }
                 if (!pending.isEmpty()) {

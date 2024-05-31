@@ -61,7 +61,7 @@ public class ExactUniformingRateLimiter<Task extends Runnable> implements RateLi
                 executed.addLast(now);
                 task.run();
             } else {
-                pending.insert(task);
+                pending.store(task);
                 schedulePending();
             }
             if (pending.isEmpty()) {
@@ -94,7 +94,7 @@ public class ExactUniformingRateLimiter<Task extends Runnable> implements RateLi
             try {
                 cleanOldExecutedRecords();
                 if (executed.size() < limit) {
-                    Optional<Task> nextPending = pending.remove();
+                    Optional<Task> nextPending = pending.fetch();
                     if (nextPending.isPresent()) {
                         Instant now = Instant.now();
                         executed.addLast(now);

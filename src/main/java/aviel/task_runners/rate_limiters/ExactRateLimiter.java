@@ -56,7 +56,7 @@ public class ExactRateLimiter<Key, Task extends KeyedTask<Key>> implements RateL
             executed.addLast(now);
             task.run();
         } else {
-            pending.insert(task);
+            pending.store(task);
             schedulePending();
         }
     }
@@ -80,7 +80,7 @@ public class ExactRateLimiter<Key, Task extends KeyedTask<Key>> implements RateL
             if (executed.size() >= limit) {
                 break;
             }
-            Optional<Task> nextPending = pending.remove();
+            Optional<Task> nextPending = pending.fetch();
             if (nextPending.isEmpty()) {
                 break;
             }

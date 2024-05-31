@@ -36,7 +36,7 @@ public class LoadBasedRateLimiter<Task extends Runnable> implements RateLimiter<
         this.maxLoad = maxLoad;
         pending = pendingTasksCreator.get();
         from(Duration.ofSeconds(1).dividedBy(loadRate)).schedule(loadDecrementer, () -> {
-            Optional<Task> removed = pending.remove();
+            Optional<Task> removed = pending.fetch();
             if (removed.isPresent()) {
                 removed.get().run();
             } else {
@@ -50,7 +50,7 @@ public class LoadBasedRateLimiter<Task extends Runnable> implements RateLimiter<
         if (incrementLoad()) {
             task.run();
         } else {
-            pending.insert(task);
+            pending.store(task);
         }
     }
 

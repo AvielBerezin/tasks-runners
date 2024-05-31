@@ -33,7 +33,7 @@ public class RandomPendingTasks<Key, Task extends KeyedTask<Key>> implements Pen
     }
 
     @Override
-    public synchronized void insert(Task task) {
+    public synchronized void store(Task task) {
         if (weighted.size() == maxStoredTasks) {
             disposeEntryWeightedly();
         }
@@ -58,7 +58,7 @@ public class RandomPendingTasks<Key, Task extends KeyedTask<Key>> implements Pen
     }
 
     @Override
-    public synchronized Optional<Task> remove() {
+    public synchronized Optional<Task> fetch() {
         Optional<Key> chosenOpt = undiscriminating.get(random);
         if (chosenOpt.isEmpty()) {
             return Optional.empty();

@@ -14,14 +14,14 @@ import static java.util.Comparator.comparing;
  * all entries of a key which hold the oldest entry are disposed.
  * When fetching an element, the last element to be recorded is fetched.
  */
-public class KeyedSwapperPendingTasks<Key, Task extends KeyedTask<Key>> implements PendingTasks<Task> {
+public class KeyedSwapperByOldestPendingTasks<Key, Task extends KeyedTask<Key>> implements PendingTasks<Task> {
     private final SortedSet<Key> sortedKeys;
     private final Map<Key, CyclicQueue<Timestamped<Task>>> queuesMap;
 
     private final int queuesCountMax;
     private final int queueSizeMax;
 
-    public KeyedSwapperPendingTasks(int queuesCountMax, int queueSizeMax) {
+    public KeyedSwapperByOldestPendingTasks(int queuesCountMax, int queueSizeMax) {
         queuesMap = new HashMap<>();
         Function<Optional<Timestamped<Task>>, Timestamped<Task>> optionalGet = runnableTimestamped ->
                 runnableTimestamped.orElseThrow(() -> new RuntimeException("should not have empty queues"));
@@ -33,7 +33,7 @@ public class KeyedSwapperPendingTasks<Key, Task extends KeyedTask<Key>> implemen
     }
 
     @Override
-    public synchronized void insert(Task task) {
+    public synchronized void store(Task task) {
         if (queuesMap.containsKey(task.key())) {
             CyclicQueue<Timestamped<Task>> queue = queuesMap.get(task.key());
             sortedKeys.remove(task.key());
@@ -51,7 +51,7 @@ public class KeyedSwapperPendingTasks<Key, Task extends KeyedTask<Key>> implemen
     }
 
     @Override
-    public synchronized Optional<Task> remove() {
+    public synchronized Optional<Task> fetch() {
         if (sortedKeys.isEmpty()) {
             return Optional.empty();
         }

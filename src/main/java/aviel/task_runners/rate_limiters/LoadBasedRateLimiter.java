@@ -1,6 +1,6 @@
 package aviel.task_runners.rate_limiters;
 
-import aviel.task_runners.pending_tasks.PendingTasks;
+import aviel.task_runners.pending_tasks.Storage;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -20,7 +20,7 @@ import static aviel.task_runners.DurationForScheduler.from;
 public class LoadBasedRateLimiter<Task extends Runnable> implements RateLimiter<Task> {
     private final AtomicInteger load;
     private final int maxLoad;
-    private final PendingTasks<Task> pending;
+    private final Storage<Task> pending;
 
     /**
      * @param pendingTasksCreator a creator for the collector of tasks for pending.
@@ -28,7 +28,7 @@ public class LoadBasedRateLimiter<Task extends Runnable> implements RateLimiter<
      * @param loadRate            the rate of which the load decreases involuntarily. Units: Hz (times per second)
      * @param maxLoad             the maximal load that is allowed to be reached. Units: Hz (times per second)
      */
-    public LoadBasedRateLimiter(Supplier<PendingTasks<Task>> pendingTasksCreator,
+    public LoadBasedRateLimiter(Supplier<Storage<Task>> pendingTasksCreator,
                                 ScheduledExecutorService loadDecrementer,
                                 int loadRate,
                                 int maxLoad) {

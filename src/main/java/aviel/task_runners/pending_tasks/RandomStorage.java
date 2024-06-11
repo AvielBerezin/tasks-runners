@@ -12,7 +12,7 @@ import java.util.function.Consumer;
  * Tasks are disposed weightedly, that is, to dispose a task a key is chosen by a chance proportional to the amount of tasks on that key.
  * Tasks are fetched indiscriminately, that is, a key for whom its task will be fetched is chosen with uniform distribution.
  */
-public class RandomPendingTasks<Key, Task extends KeyedTask<Key>> implements PendingTasks<Task> {
+public class RandomStorage<Key, Task extends KeyedTask<Key>> implements Storage<Task> {
     private final Consumer<Task> onDispose;
     private final Undiscriminating<Key> undiscriminating;
     private final Weighted<Key> weighted;
@@ -20,7 +20,7 @@ public class RandomPendingTasks<Key, Task extends KeyedTask<Key>> implements Pen
     private final int maxStoredTasks;
     private final Random random;
 
-    public RandomPendingTasks(Random random, int maxStoredTasks, Consumer<Task> onDispose) {
+    public RandomStorage(Random random, int maxStoredTasks, Consumer<Task> onDispose) {
         if (maxStoredTasks < 1) {
             throw new IllegalArgumentException("maxStoredTasks must have a strictly positive value");
         }

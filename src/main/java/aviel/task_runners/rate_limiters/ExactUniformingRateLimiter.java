@@ -2,7 +2,7 @@ package aviel.task_runners.rate_limiters;
 
 import aviel.task_runners.DurationForScheduler;
 import aviel.task_runners.Utils;
-import aviel.task_runners.pending_tasks.PendingTasks;
+import aviel.task_runners.pending_tasks.Storage;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -21,7 +21,7 @@ import java.util.function.Supplier;
  */
 public class ExactUniformingRateLimiter<Task extends Runnable> implements RateLimiter<Task> {
     private final Deque<Instant> executed;
-    private final PendingTasks<Task> pending;
+    private final Storage<Task> pending;
     private final ScheduledExecutorService pendingScheduler;
     private final AtomicBoolean isScheduled;
     private final Duration duration;
@@ -29,7 +29,7 @@ public class ExactUniformingRateLimiter<Task extends Runnable> implements RateLi
     private final double uniformingRate;
     private final Object completionLock;
 
-    public ExactUniformingRateLimiter(Supplier<PendingTasks<Task>> pendingTasksCreator,
+    public ExactUniformingRateLimiter(Supplier<Storage<Task>> pendingTasksCreator,
                                       ScheduledExecutorService pendingScheduler,
                                       double uniformingRate,
                                       Duration duration, int limit) {

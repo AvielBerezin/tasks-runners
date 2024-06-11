@@ -2,8 +2,8 @@ package aviel.task_runners.examples;
 
 import aviel.task_runners.KeyedTask;
 import aviel.task_runners.Utils;
-import aviel.task_runners.pending_tasks.PendingTasks;
-import aviel.task_runners.pending_tasks.RandomPendingTasks;
+import aviel.task_runners.pending_tasks.Storage;
+import aviel.task_runners.pending_tasks.RandomStorage;
 import aviel.task_runners.rate_limiters.ExactUniformingRateLimiter;
 import aviel.task_runners.rate_limiters.RateLimiter;
 import com.influxdb.client.InfluxDBClient;
@@ -104,7 +104,7 @@ public class ExactUniformingRateLimiterExample {
         AtomicLong executedCount = new AtomicLong(0);
         AtomicLong submittedCount = new AtomicLong(0);
         ExactUniformingRateLimiter<IndexedTask> rateLimiter =
-                new ExactUniformingRateLimiter<>(() -> new RandomPendingTasks<>(new Random(), maxStoredTasks,
+                new ExactUniformingRateLimiter<>(() -> new RandomStorage<>(new Random(), maxStoredTasks,
                                                                                 disposedTask -> {
                                                                                     writeApi.writePoint(bucket, org,
                                                                                                         setPointBasicData.apply(disposedTask.key(), disposedTask.id())
@@ -164,9 +164,9 @@ public class ExactUniformingRateLimiterExample {
                              duration.toString())
                      .addTag(ExactUniformingRateLimiter.class.getSimpleName() + ".limit",
                              String.valueOf(limit))
-                     .addTag(PendingTasks.class.getSimpleName(),
-                             RandomPendingTasks.class.getSimpleName())
-                     .addTag(RandomPendingTasks.class.getSimpleName() + ".maxStoredTasks",
+                     .addTag(Storage.class.getSimpleName(),
+                             RandomStorage.class.getSimpleName())
+                     .addTag(RandomStorage.class.getSimpleName() + ".maxStoredTasks",
                              String.valueOf(maxStoredTasks));
     }
 

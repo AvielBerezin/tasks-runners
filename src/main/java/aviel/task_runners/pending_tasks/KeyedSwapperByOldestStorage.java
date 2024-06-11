@@ -14,14 +14,14 @@ import static java.util.Comparator.comparing;
  * all entries of a key which hold the oldest entry are disposed.
  * When fetching an element, the last element to be recorded is fetched.
  */
-public class KeyedSwapperByOldestPendingTasks<Key, Task extends KeyedTask<Key>> implements PendingTasks<Task> {
+public class KeyedSwapperByOldestStorage<Key, Task extends KeyedTask<Key>> implements Storage<Task> {
     private final SortedSet<Key> sortedKeys;
     private final Map<Key, CyclicQueue<Timestamped<Task>>> queuesMap;
 
     private final int queuesCountMax;
     private final int queueSizeMax;
 
-    public KeyedSwapperByOldestPendingTasks(int queuesCountMax, int queueSizeMax) {
+    public KeyedSwapperByOldestStorage(int queuesCountMax, int queueSizeMax) {
         queuesMap = new HashMap<>();
         Function<Optional<Timestamped<Task>>, Timestamped<Task>> optionalGet = runnableTimestamped ->
                 runnableTimestamped.orElseThrow(() -> new RuntimeException("should not have empty queues"));

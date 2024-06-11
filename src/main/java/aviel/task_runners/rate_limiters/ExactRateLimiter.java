@@ -3,7 +3,7 @@ package aviel.task_runners.rate_limiters;
 import aviel.task_runners.DurationForScheduler;
 import aviel.task_runners.KeyedTask;
 import aviel.task_runners.Utils;
-import aviel.task_runners.pending_tasks.PendingTasks;
+import aviel.task_runners.pending_tasks.Storage;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -22,13 +22,13 @@ import java.util.function.Supplier;
  */
 public class ExactRateLimiter<Key, Task extends KeyedTask<Key>> implements RateLimiter<Task> {
     private final Deque<Instant> executed;
-    private final PendingTasks<Task> pending;
+    private final Storage<Task> pending;
     private final ScheduledExecutorService pendingScheduler;
     private final AtomicBoolean isScheduled;
     private final Duration duration;
     private final int limit;
 
-    public ExactRateLimiter(Supplier<PendingTasks<Task>> pendingTasksCreator,
+    public ExactRateLimiter(Supplier<Storage<Task>> pendingTasksCreator,
                             ScheduledExecutorService pendingScheduler,
                             Duration duration, int limit) {
         if (limit < 1) {
